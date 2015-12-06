@@ -27,31 +27,38 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
 
+    <link href='https://api.mapbox.com/mapbox.js/v2.2.3/mapbox.css' rel='stylesheet' />
+    <!-- Load c3.css -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.css" rel="stylesheet" type="text/css">
+
 
 <style type="text/css">
 body {
   box-sizing: border-box;
 }
-  .myicon {
-      background-image: url("https://pbs.twimg.com/profile_images/644772616507629568/2AcXWHBp_bigger.png");
+{% for t in latest_tweets %}
+  .myicon{{ t.screen_name }} {
+      background-image: url("{{ t.image_url }}");
       background-size: 60px 60px;
       border-radius: 5px;
-      border: 4px solid #007bff;
+      border: 4px solid {{ t.color }};
       width: 60px;
       height: 60px;
       box-sizing: border-box;
   }
 
-  .myicon::before {
+  .myicon{{ t.screen_name }}::before {
     content: "";
     position: relative;
-    top: 76px; 
+    top: 86px;
     width: 0;
 height: 0;
 border-style: solid;
 border-width: 22px 26px 0 26px;
-border-color: #007bff transparent transparent transparent;
-}
+border-color: {{ t.color }} transparent transparent transparent;
+  }
+{% endfor %}
+
 </style>
 
 
@@ -62,15 +69,8 @@ border-color: #007bff transparent transparent transparent;
 
 
     <div class="form-horizontal" style="text-align: center; width: 500px; margin: auto">
-    <img src="images/logotype.jpg" style="display: block; margin: auto">
-    
-    <!-- Marker style to add to the map
-    <div class="myicon"></div> -->
+    <img src="/static/images/logotype.jpg" style="display: block; margin: auto">
 
-    {% block body %}
-    <h1>Your state of mind is BLUE</h1>
-    {% endblock body %}
-    
     <div style="display: inline-block; width: 100%; margin-bottom: 10px; text-align: center">      
       <h3 style="line-height: 0px; margin-right: 20px; display: inline-block">Select another</h3>
       <select class="form-control" style="width: auto; display: inline-block">
@@ -80,8 +80,14 @@ border-color: #007bff transparent transparent transparent;
       </select>      
     </div>
 
-    <div style="background-color: orange; height: 100px; color: white; font-size: 30px">CHART</div>
-    <div style="background-color: purple; height: 400px; color: white; font-size: 30px">MAP</div>
+    <h2>Your State of Mind:</h2>
+    <div id="braincolor" style="height:50px; background-color: {{ my_last.color }}; margin: 0 50px 30px 50px;"></div>
+
+    <div id="map" style="background-color: purple; height: 400px; color: white; font-size: 30px">MAP</div>
+
+    <h2>Your Brain's State:</h2>
+    <div id="chart" style="height: 100px; color: white; font-size: 30px">CHART</div>
+
 </div>
 
 
@@ -92,6 +98,73 @@ border-color: #007bff transparent transparent transparent;
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
             integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
             crossorigin="anonymous"></script>
+
+    <!-- Load d3.js and c3.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.10/d3.min.js" charset="utf-8"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
+
+    <script>
+    var chart = c3.generate({
+        bindto: '#chart',
+        data: {
+          type: "bar",
+          columns: [
+            ['θ',    {{ my_last.theta }}],
+            ['α',    {{ my_last.alpha }}],
+            ['β',    {{ my_last.beta }}],
+            ['fmax', {{ my_last.fmax }}]
+          ],
+        },
+        axis: {
+          x: {show: false},
+          y: {show: false}
+        }
+    });
+    </script>
+
+    <script src='https://api.tiles.mapbox.com/mapbox.js/v2.2.3/mapbox.js'></script>
+    <script>
+    // Provide your access token
+    L.mapbox.accessToken = 'pk.eyJ1IjoidXdla2FtcGVyIiwiYSI6ImJjYzY2ZDc5OGJkMWMxNGMwNjI5YWZiODAzZTYzMDNkIn0.C5ls9eOui11tah06X2sgXQ';
+    // Create a map in the div #map
+
+    var mapOne = L.mapbox.map('map', 'mapbox.light').setView([{{ my_last.lat }}, {{ my_last.long }}], 12);
+var myLayer = L.mapbox.featureLayer().addTo(mapOne);
+
+var geojson = [
+    {% for t in latest_tweets %}
+  {
+    "type": "Feature",
+    "geometry": {
+      "type": "Point",
+      "coordinates": [{{ t.long }},{{ t.lat }}]
+    },
+    "properties": {
+      "icon": {
+        /*
+          ",
+          "iconSize": [50, 50], // size of the icon
+          "iconAnchor": [25, 25], // point of the icon which will correspond to marker's location
+          "popupAnchor": [0, -25], // point from which the popup should open relative to the iconAnchor
+
+        "iconUrl": "{{ t.image_url }}",*/
+        "html": "&#9733;", // add content inside the marker
+        "iconSize": null, // size of icon, use null to set the size in CSS
+        "className": "myicon{{ t.screen_name }}"
+      }
+    }
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}];
+myLayer.on('layeradd', function(e) {
+  var marker = e.layer,
+      feature = marker.feature;
+  marker.setIcon(L.divIcon(feature.properties.icon));
+});
+myLayer.setGeoJSON(geojson);
+mapOne.scrollWheelZoom.disable();
+    </script>
+
+
   </body>
 </html>
 
