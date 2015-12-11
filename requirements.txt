@@ -1,6 +1,4 @@
 Django==1.8.4
 python-dateutil==2.4.2
-scikit-learn==0.17
-python-dateutil==2.4.2
 requests==2.8.1
 scikit-learn==0.17

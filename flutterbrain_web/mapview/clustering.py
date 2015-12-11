@@ -23,7 +23,11 @@ class Tweet(object):
 
     @property
     def vector(self):
-        return extract_brainstate(self.text)
+        val = extract_brainstate(self.text)
+        if val == None:
+            return (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        else:
+            return val
 
     @property
     def theta(self):
